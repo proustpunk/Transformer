@@ -44,8 +44,13 @@ for i in range(3):
 
     OUTPUTS.append(X + OUTPUT_projected)  
 
-for output in OUTPUTS:
-    concatenated_attention = np.concatenate(output, axis=1)
+concatenated_attention = np.concatenate(OUTPUTS, axis=1)  # Shape: (6, 300)
+
+
+mean = np.mean(concatenated_attention, axis=1, keepdims=True)  
+std = np.std(concatenated_attention, axis=1, keepdims=True)    
+
+layer_norm_output = (concatenated_attention - mean) / (std + 1e-5)  
 
 
 
