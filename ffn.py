@@ -173,3 +173,45 @@ def backprop(w_q_list, w_k_list,w_vl_list,w_proj_list,expand_ffn_w,contract_ffn_
     correct_error_dimension[-1,:] = error
     d_projected_matrix = final_ffn_normalized.T @ correct_error_dimension
 
+    d_final_ffn_normalized = correct_error_dimension @ projected_matrix.T
+
+
+    n = final_ffn.shape[0]      # number of rows (6)
+    N = final_ffn.shape[1]      # number of columns per row (300)
+
+    d_final_ffn = np.zeros_like(final_ffn)
+
+    for i in range(n):
+        mean_i = mean2[i][0]
+        std_i = std2[i][0]
+        eps = 1e-5
+
+        for j in range(N):
+            total = 0
+            for k in range(N):
+                y = final_ffn[i][k]
+                z = mean_i
+                w = std_i
+                a = eps
+
+                dy_dt = 1 if k == j else 0   
+                dz_dt = 1 / N                
+                dw_dt = (final_ffn[i][j] - mean_i) / (N * std_i)  
+
+                # quotient rule: x = (y-z)/(w+a)
+                dx_dt = ((w + a) * (dy_dt - dz_dt) - (y - z) * dw_dt) / (w + a)**2
+
+                g_k = d_final_ffn_normalized[i][k]   
+                total += g_k * dx_dt
+
+            d_final_ffn[i][j] = total
+
+
+    d_contract_ffn = apply_relu.T @ d_final_ffn
+
+    d_apply_relu = d_final_ffn @ contract_ffn_w.T
+
+    d_layer_norm_output_expanded = d_apply_relu * (layer_norm_output_expanded > 0)
+
+    d_expand_ffn_w = layer_norm_output.T @ d_layer_norm_output_expanded
+
